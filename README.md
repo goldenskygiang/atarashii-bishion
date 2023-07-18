@@ -10,6 +10,9 @@ Another プロジェクト for the 11th Cloud Programming World Cup in 2023.
 - Download OpenCV.
 
 ### Build and install dlib
+
+Reference: https://learnopencv.com/install-dlib-on-windows/
+
 - Download [dlib](http://dlib.net/) then extract the archive.
 - Create a `build` folder in the parent folder of `dlib, docs, examples`, etc.
 - Type the following commands to build `dlib`.
