@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <HAARCASCADE_FRONTALFACE_ALT_XML>C:\\opencv\\build\\etc\\haarcascades\\haarcascade_frontalface_alt.xml</HAARCASCADE_FRONTALFACE_ALT_XML>
+    <SHAPE_PREDICTOR_68_FACE_LANDMARKS_DAT>C:\\opencv\\build\\etc\\shape_predictor_68_face_landmarks.dat</SHAPE_PREDICTOR_68_FACE_LANDMARKS_DAT>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(OpenCV_DIR)\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAARCASCADE_FRONTALFACE_ALT_XML=$(HAARCASCADE_FRONTALFACE_ALT_XML);SHAPE_PREDICTOR_68_FACE_LANDMARKS_DAT=$(SHAPE_PREDICTOR_68_FACE_LANDMARKS_DAT);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(OpenCV_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_world470.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="HAARCASCADE_FRONTALFACE_ALT_XML">
+      <Value>$(HAARCASCADE_FRONTALFACE_ALT_XML)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
+    </BuildMacro>
+    <BuildMacro Include="SHAPE_PREDICTOR_68_FACE_LANDMARKS_DAT">
+      <Value>$(SHAPE_PREDICTOR_68_FACE_LANDMARKS_DAT)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
+    </BuildMacro>
+  </ItemGroup>
+</Project>
