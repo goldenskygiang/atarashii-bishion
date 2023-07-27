@@ -6,8 +6,8 @@ Another プロジェクト for the 11th Cloud Programming World Cup in 2023.
 もう一度，日本へ戻ってくる！
 
 ## Get started
-- Install Visual Studio 2022.
-- Download OpenCV.
+- Download and install Visual Studio 2022.
+- Download and install OpenCV.
 
 ### Build and install dlib
 
@@ -41,3 +41,10 @@ cmake -G "Visual Studio 17 2022" `
 
 cmake --build . --config Release --target INSTALL
 ```
+
+## Dependency directory
+
+- Dlib: `C:\dlib`
+- OpenCV: `C:\opencv`
+- haarcascade_frontalface_alt.xml: `C:\opencv\build\etc\haarcascades\haarcascade_frontalface_alt.xml`
+- shape_predictor_68_face_landmarks.dat: `C:\opencv\build\etc\shape_predictor_68_face_landmarks.dat`
