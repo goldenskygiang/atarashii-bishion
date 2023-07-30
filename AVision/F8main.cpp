@@ -24,7 +24,7 @@ using namespace std;
 #define M_PI 3.14159265358979323846
 #endif
 
-class SampleOutputVehicleInfoPlugin
+class AVisionHeadTrackingPlugin
 {
 private:
     F8MainRibbonTabProxy ribbonTab;
@@ -34,11 +34,11 @@ private:
     void* p_stopHandle;
 
 public:
-    SampleOutputVehicleInfoPlugin()
+    AVisionHeadTrackingPlugin()
     {
         // constructor
     }
-    ~SampleOutputVehicleInfoPlugin()
+    ~AVisionHeadTrackingPlugin()
     {
         // destructor
     }
@@ -47,10 +47,10 @@ public:
 
     std::thread thd;
 
-    void OnButtonRoadInfo1Click()
+    void OnStartBtnClick()
     {
         isCapturing.store(true);
-        thd = std::thread(&SampleOutputVehicleInfoPlugin::TrackHead, this);
+        thd = std::thread(&AVisionHeadTrackingPlugin::TrackHead, this);
         thd.detach();
     }
 
@@ -109,24 +109,24 @@ public:
     {
         F8MainFormProxy mainForm = g_applicationServices->GetMainForm();
         F8MainRibbonProxy ribbonMenu = mainForm->GetMainRibbonMenu();
-        ribbonTab = ribbonMenu->GetTabByName(L"CppAPISamples");
+        ribbonTab = ribbonMenu->GetTabByName(L"AVision");
         if (!Assigned(ribbonTab)) {
-            ribbonTab = ribbonMenu->CreateTab(L"CppAPISamples", 10000);
-            ribbonTab->SetCaption(L"C++ API Samples");
+            ribbonTab = ribbonMenu->CreateTab(L"AVision", 10000);
+            ribbonTab->SetCaption(L"AVision");
         }
-        ribbonGroup = ribbonTab->CreateGroup(L"GroupVehicleInfo1", 100);
+        ribbonGroup = ribbonTab->CreateGroup(L"HeadTracking", 100);
         ribbonGroup->SetCaption(L"Head Tracking");
 
         ribbonButton = ribbonGroup->CreateButton(L"EnableLogger");
         ribbonButton->SetCaption(L"Start");
         ribbonButton->SetWidth(120);
-        Cb_RibbonMenuItemOnClick callback = std::bind(&SampleOutputVehicleInfoPlugin::OnButtonRoadInfo1Click, this);
+        Cb_RibbonMenuItemOnClick callback = std::bind(&AVisionHeadTrackingPlugin::OnStartBtnClick, this);
         p_cbHandle = ribbonButton->SetCallbackOnClick(callback);
 
         stopBtn = ribbonGroup->CreateButton(L"DisableLogger");
         stopBtn->SetCaption(L"Stop");
         stopBtn->SetTop(ribbonButton->GetTop() + ribbonButton->GetHeight() + 6);
-        callback = std::bind(&SampleOutputVehicleInfoPlugin::OnStopBtnClick, this);
+        callback = std::bind(&AVisionHeadTrackingPlugin::OnStopBtnClick, this);
         p_stopHandle = stopBtn->SetCallbackOnClick(callback);
     }
     void StopProgram()
@@ -139,7 +139,7 @@ public:
     }
 };
 
-SampleOutputVehicleInfoPlugin Plugin;
+AVisionHeadTrackingPlugin Plugin;
 
 void StartProgram(void)
 {
