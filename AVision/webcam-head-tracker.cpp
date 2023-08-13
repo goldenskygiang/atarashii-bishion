@@ -703,15 +703,15 @@ bool WebcamHeadTracker::computeHeadPose()
         cv::line(*_frame, projectedFilteredModelLandmarks[5], projectedFilteredModelLandmarks[6], cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[0], 3.0f, cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[2], 3.0f, cv::Scalar(255, 255, 0));
-        cv::circle(*_frame, projectedFilteredModelLandmarks[4], 3.0f, cv::Scalar(255, 255, 0));
+        cv::circle(*_frame, projectedFilteredModelLandmarks[4], 13.0f, cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[5], 3.0f, cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[6], 3.0f, cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[7], 3.0f, cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[8], 3.0f, cv::Scalar(255, 255, 0));
         // show
-        cv::imshow("webcam head tracker", *_frame);
+        cv::imshow("AVision Head Tracker", *_frame);
         int key = cv::waitKey(1);
-        if (key == 27 || key == 'q')
+        if (key == 27 || key == 'q' || cv::getWindowProperty("AVision Head Tracker", cv::WND_PROP_VISIBLE) <= 0)
             _isReady = false;
         if (key == 'f')
             _filter = (_filter == Filter_None ? Filter_Kalman

@@ -104,6 +104,8 @@ public:
                 lastPos[2] = pos[2];
             }
         }
+
+        isCapturing.store(false);
     }
     void StartProgram()
     {
