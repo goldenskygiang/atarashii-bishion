@@ -23,6 +23,8 @@
 #ifndef WEBCAM_HEAD_TRACKER_HPP
 #define WEBCAM_HEAD_TRACKER_HPP
 
+#include <string>
+
  /*! \cond */
 namespace cv {
     class VideoCapture;
@@ -181,6 +183,8 @@ public:
      */
     void getHeadOrientation(float* headOrientation) const;
 
+    static const std::string WindowName;
+
 private:
     unsigned int _debugOptions;
     bool _isReady;
@@ -206,7 +210,6 @@ private:
     // last known head pose
     float _headPosition[3];
     float _headOrientation[4];
-
 };
 
 #endif

@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <cmath>
 
+#include <opencv2/highgui/highgui_c.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
@@ -194,6 +195,8 @@ public:
 };
 
 /* WebcamHeadTracker */
+
+const std::string WebcamHeadTracker::WindowName = "AVision Head Tracker";
 
 WebcamHeadTracker::WebcamHeadTracker(unsigned int debugOptions) :
     _debugOptions(debugOptions),
@@ -709,9 +712,10 @@ bool WebcamHeadTracker::computeHeadPose()
         cv::circle(*_frame, projectedFilteredModelLandmarks[7], 3.0f, cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[8], 3.0f, cv::Scalar(255, 255, 0));
         // show
-        cv::imshow("AVision Head Tracker", *_frame);
+        cv::imshow(WindowName, *_frame);
+
         int key = cv::waitKey(1);
-        if (key == 27 || key == 'q' || cv::getWindowProperty("AVision Head Tracker", cv::WND_PROP_VISIBLE) <= 0)
+        if (key == 27 || key == 'q' || cv::getWindowProperty(WindowName, cv::WND_PROP_VISIBLE) <= 0)
             _isReady = false;
         if (key == 'f')
             _filter = (_filter == Filter_None ? Filter_Kalman

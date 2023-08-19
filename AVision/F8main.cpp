@@ -18,6 +18,9 @@
 #include <cstdio>
 #include <cmath>
 
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/highgui/highgui.hpp>
+
 using namespace std;
 
 #ifndef M_PI
@@ -32,6 +35,31 @@ private:
     F8MainRibbonButtonProxy ribbonButton, stopBtn;
     void* p_cbHandle;
     void* p_stopHandle;
+
+    void MoveMouse(int dx, int dy)
+    {
+        const int K_FACTOR = -4;
+
+        POINT currentPosition;
+        GetCursorPos(&currentPosition);
+        currentPosition.x += dx * K_FACTOR;
+        currentPosition.y += dy * K_FACTOR;
+        SetCursorPos(currentPosition.x, currentPosition.y);
+    }
+
+    void UnfocusWindowAndSetTransparency()
+    {
+        HWND hwnd = (HWND)cvGetWindowHandle(WebcamHeadTracker::WindowName.c_str());
+
+        const int transparency = 50;
+        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        SetLayeredWindowAttributes(hwnd, 0, transparency, LWA_ALPHA);
+
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+        // Remove focus from the window
+        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    }
 
 public:
     AVisionHeadTrackingPlugin()
@@ -74,18 +102,35 @@ public:
         }
         float lastPos[3] = { 0.0f, 0.0f, -1.0f };
 
+        INPUT input = { 0 };
+        input.type = INPUT_MOUSE;
+        SetCursorPos(960, 540);
+
+        bool initial = true;
+
+        cv::namedWindow(WebcamHeadTracker::WindowName, cv::WINDOW_KEEPRATIO);
+        UnfocusWindowAndSetTransparency();
+
         while (isCapturing.load() && tracker.isReady())
         {
+            if (input.mi.dwFlags != MOUSEEVENTF_LEFTDOWN)
+            {
+                input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                SendInput(1, &input, sizeof(INPUT));
+            }
+
             tracker.getNewFrame();
             bool gotPose = tracker.computeHeadPose();
-            if (gotPose) {
+            if (gotPose)
+            {
                 float pos[3];
                 tracker.getHeadPosition(pos);
                 pos[0] *= 1000.0f;
                 pos[1] *= 1000.0f;
                 pos[2] *= 1000.0f;
                 fprintf(stderr, "position in mm: %+6.1f %+6.1f %+6.1f\n", pos[0], pos[1], pos[2]);
-                if (lastPos[2] >= 0.0f) {
+                if (lastPos[2] >= 0.0f)
+                {
                     float diff[3] = { pos[0] - lastPos[0], pos[1] - lastPos[1], pos[2] - lastPos[2] };
                     float dist = std::sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
                     fprintf(stderr, "distance to last position in mm: %+6.1f\n", dist);
@@ -99,13 +144,27 @@ public:
                 axis[2] = quaternion[2] / std::sin(halfAngle);
                 fprintf(stderr, "orientation: rotated %+4.1f degrees around axis (%+4.2f %+4.2f %+4.2f)\n",
                     2.0f * halfAngle / (float)M_PI * 180.0f, axis[0], axis[1], axis[2]);
+
+                if (!initial)
+                {
+                    int dx = pos[0] - lastPos[0];
+                    int dy = pos[1] - lastPos[1];
+                    MoveMouse(dx, dy);
+                }
+
                 lastPos[0] = pos[0];
                 lastPos[1] = pos[1];
                 lastPos[2] = pos[2];
+
+                initial = false;
             }
         }
 
         isCapturing.store(false);
+        input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        SendInput(1, &input, sizeof(INPUT));
+
+        cv::destroyAllWindows();
     }
     void StartProgram()
     {
