@@ -36,14 +36,16 @@ private:
     void* p_cbHandle;
     void* p_stopHandle;
 
+    int screenWidth, screenHeight;
+
     void MoveMouse(int dx, int dy)
     {
-        const int K_FACTOR = -4;
+        const int K_FACTOR = 6;
 
         POINT currentPosition;
         GetCursorPos(&currentPosition);
         currentPosition.x += dx * K_FACTOR;
-        currentPosition.y += dy * K_FACTOR;
+        currentPosition.y += dy * -K_FACTOR;
         SetCursorPos(currentPosition.x, currentPosition.y);
     }
 
@@ -51,14 +53,17 @@ private:
     {
         HWND hwnd = (HWND)cvGetWindowHandle(WebcamHeadTracker::WindowName.c_str());
 
-        const int transparency = 50;
-        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-        SetLayeredWindowAttributes(hwnd, 0, transparency, LWA_ALPHA);
+        //const unsigned char transparency = 50;
+        //SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        //SetLayeredWindowAttributes(hwnd, RGB(255, 255, 255), transparency, LWA_ALPHA);
 
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
         // Remove focus from the window
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+
+        //HWND f8 = (HWND)g_applicationServices->GetMainForm()->GetWindowHandle();
+        //SetForegroundWindow(f8);
     }
 
 public:
@@ -87,29 +92,57 @@ public:
         isCapturing.store(false);
     }
 
+    LRESULT CALLBACK HandleKeypress(int nCode, WPARAM wParam, LPARAM lParam)
+    {
+        if (nCode >= 0 && wParam == WM_KEYDOWN)
+        {
+            KBDLLHOOKSTRUCT* pKbStruct = (KBDLLHOOKSTRUCT*)lParam;
+            DWORD vkCode = pKbStruct->vkCode;
+
+            if (vkCode == VK_ESCAPE)
+            {
+                isCapturing.store(false);
+            }
+        }
+
+        return CallNextHookEx(NULL, nCode, wParam, lParam);
+    }
+
     void TrackHead()
     {
-        WebcamHeadTracker tracker(WebcamHeadTracker::Debug_Timing | WebcamHeadTracker::Debug_Window);
+        int previewWindow = 0;
+        WebcamHeadTracker tracker(WebcamHeadTracker::Debug_Window & previewWindow);
+
         if (!tracker.initWebcam()) {
-            fprintf(stderr, "No usable webcam found\n");
+            MessageBox(NULL, L"No usable webcam found",
+                std::wstring(WebcamHeadTracker::WindowName.begin(), WebcamHeadTracker::WindowName.end()).c_str(),
+                MB_OK | MB_ICONERROR);
             return;
         }
         if (!tracker.initPoseEstimator()) {
-            fprintf(stderr, "Cannot initialize pose esimator:\n"
+            MessageBox(NULL, L"Cannot initialize pose esimator:\n"
                 "haarcascade_frontalface_alt.xml and shape_predictor_68_face_landmarks.dat\n"
-                "are not where they were when libwebcamheadtracker was built\n");
+                "are not where they were when libwebcamheadtracker was built\n",
+                std::wstring(WebcamHeadTracker::WindowName.begin(), WebcamHeadTracker::WindowName.end()).c_str(),
+                MB_OK | MB_ICONERROR);
             return;
         }
         float lastPos[3] = { 0.0f, 0.0f, -1.0f };
 
+        if (previewWindow)
+        {
+            cv::namedWindow(WebcamHeadTracker::WindowName, cv::WINDOW_KEEPRATIO);
+            UnfocusWindowAndSetTransparency();
+        }
+        
+        screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
         INPUT input = { 0 };
         input.type = INPUT_MOUSE;
-        SetCursorPos(960, 540);
+        SetCursorPos(screenWidth / 2, screenHeight / 2);
 
         bool initial = true;
-
-        cv::namedWindow(WebcamHeadTracker::WindowName, cv::WINDOW_KEEPRATIO);
-        UnfocusWindowAndSetTransparency();
 
         while (isCapturing.load() && tracker.isReady())
         {
@@ -161,10 +194,11 @@ public:
         }
 
         isCapturing.store(false);
-        input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
-        SendInput(1, &input, sizeof(INPUT));
 
-        cv::destroyAllWindows();
+        if (previewWindow)
+        {
+            cv::destroyAllWindows();
+        }
     }
     void StartProgram()
     {
