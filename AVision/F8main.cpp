@@ -18,8 +18,8 @@
 #include <cstdio>
 #include <cmath>
 
-#include <opencv2/highgui/highgui_c.h>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui_c.h>
 
 using namespace std;
 
@@ -32,7 +32,7 @@ class AVisionHeadTrackingPlugin
 private:
     F8MainRibbonTabProxy ribbonTab;
     F8MainRibbonGroupProxy ribbonGroup;
-    F8MainRibbonButtonProxy ribbonButton, stopBtn;
+    F8MainRibbonButtonProxy trackBtn, stopBtn;
     void* p_cbHandle;
     void* p_stopHandle;
 
@@ -49,42 +49,17 @@ private:
         SetCursorPos(currentPosition.x, currentPosition.y);
     }
 
-    void UnfocusWindowAndSetTransparency()
-    {
-        HWND hwnd = (HWND)cvGetWindowHandle(WebcamHeadTracker::WindowName.c_str());
-
-        //const unsigned char transparency = 50;
-        //SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-        //SetLayeredWindowAttributes(hwnd, RGB(255, 255, 255), transparency, LWA_ALPHA);
-
-        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
-        // Remove focus from the window
-        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-
-        //HWND f8 = (HWND)g_applicationServices->GetMainForm()->GetWindowHandle();
-        //SetForegroundWindow(f8);
-    }
-
 public:
-    AVisionHeadTrackingPlugin()
-    {
-        // constructor
-    }
-    ~AVisionHeadTrackingPlugin()
-    {
-        // destructor
-    }
-
     std::atomic<bool> isCapturing;
-
-    std::thread thd;
+    std::thread thdTrackHead;
 
     void OnStartBtnClick()
     {
         isCapturing.store(true);
-        thd = std::thread(&AVisionHeadTrackingPlugin::TrackHead, this);
-        thd.detach();
+        trackBtn->SetEnabled(!isCapturing.load());
+
+        thdTrackHead = std::thread(&AVisionHeadTrackingPlugin::TrackHead, this);
+        thdTrackHead.detach();
     }
 
     void OnStopBtnClick()
@@ -92,25 +67,9 @@ public:
         isCapturing.store(false);
     }
 
-    LRESULT CALLBACK HandleKeypress(int nCode, WPARAM wParam, LPARAM lParam)
-    {
-        if (nCode >= 0 && wParam == WM_KEYDOWN)
-        {
-            KBDLLHOOKSTRUCT* pKbStruct = (KBDLLHOOKSTRUCT*)lParam;
-            DWORD vkCode = pKbStruct->vkCode;
-
-            if (vkCode == VK_ESCAPE)
-            {
-                isCapturing.store(false);
-            }
-        }
-
-        return CallNextHookEx(NULL, nCode, wParam, lParam);
-    }
-
     void TrackHead()
     {
-        int previewWindow = 0;
+        const int previewWindow = 1;
         WebcamHeadTracker tracker(WebcamHeadTracker::Debug_Window & previewWindow);
 
         if (!tracker.initWebcam()) {
@@ -129,12 +88,6 @@ public:
         }
         float lastPos[3] = { 0.0f, 0.0f, -1.0f };
 
-        if (previewWindow)
-        {
-            cv::namedWindow(WebcamHeadTracker::WindowName, cv::WINDOW_KEEPRATIO);
-            UnfocusWindowAndSetTransparency();
-        }
-        
         screenWidth = GetSystemMetrics(SM_CXSCREEN);
         screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
@@ -146,7 +99,7 @@ public:
 
         while (isCapturing.load() && tracker.isReady())
         {
-            if (input.mi.dwFlags != MOUSEEVENTF_LEFTDOWN)
+            if ((GetKeyState(VK_LBUTTON) & 0x8000) == 0)
             {
                 input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
                 SendInput(1, &input, sizeof(INPUT));
@@ -194,12 +147,12 @@ public:
         }
 
         isCapturing.store(false);
+        trackBtn->SetEnabled(!isCapturing.load());
 
-        if (previewWindow)
-        {
-            cv::destroyAllWindows();
-        }
+        input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        SendInput(1, &input, sizeof(INPUT));
     }
+
     void StartProgram()
     {
         F8MainFormProxy mainForm = g_applicationServices->GetMainForm();
@@ -212,22 +165,23 @@ public:
         ribbonGroup = ribbonTab->CreateGroup(L"HeadTracking", 100);
         ribbonGroup->SetCaption(L"Head Tracking");
 
-        ribbonButton = ribbonGroup->CreateButton(L"EnableLogger");
-        ribbonButton->SetCaption(L"Start");
-        ribbonButton->SetWidth(120);
+        trackBtn = ribbonGroup->CreateButton(L"EnableLogger");
+        trackBtn->SetCaption(L"Start");
+        trackBtn->SetWidth(120);
         Cb_RibbonMenuItemOnClick callback = std::bind(&AVisionHeadTrackingPlugin::OnStartBtnClick, this);
-        p_cbHandle = ribbonButton->SetCallbackOnClick(callback);
+        p_cbHandle = trackBtn->SetCallbackOnClick(callback);
 
         stopBtn = ribbonGroup->CreateButton(L"DisableLogger");
         stopBtn->SetCaption(L"Stop");
-        stopBtn->SetTop(ribbonButton->GetTop() + ribbonButton->GetHeight() + 6);
+        stopBtn->SetTop(trackBtn->GetTop() + trackBtn->GetHeight() + 6);
         callback = std::bind(&AVisionHeadTrackingPlugin::OnStopBtnClick, this);
         p_stopHandle = stopBtn->SetCallbackOnClick(callback);
     }
+
     void StopProgram()
     {
-        ribbonButton->UnsetCallbackOnClick(p_cbHandle);
-        ribbonGroup->DeleteControl(ribbonButton);
+        trackBtn->UnsetCallbackOnClick(p_cbHandle);
+        ribbonGroup->DeleteControl(trackBtn);
         ribbonTab->DeleteGroup(ribbonGroup);
         if (ribbonTab->GetRibbonGroupsCount() == 0)
             g_applicationServices->GetMainForm()->GetMainRibbonMenu()->DeleteTab(ribbonTab);
@@ -238,13 +192,9 @@ AVisionHeadTrackingPlugin Plugin;
 
 void StartProgram(void)
 {
-    //User Main Code Starts Here
     Plugin.StartProgram();
-    //User Main Code Ends Here
 }
 void StopProgram(void)
 {
-    //User Main Code Starts Here
     Plugin.StopProgram();
-    //User Main Code Ends Here
 }

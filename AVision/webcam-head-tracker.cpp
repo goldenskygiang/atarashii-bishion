@@ -196,7 +196,9 @@ public:
 
 /* WebcamHeadTracker */
 
-const std::string WebcamHeadTracker::WindowName = "AVision Head Tracker";
+const std::wstring WebcamHeadTracker::WindowName = L"AVision Head Tracker";
+int WebcamHeadTracker::WindowFeedAlpha = 100;
+bool WebcamHeadTracker::FeedOpened = false;
 
 WebcamHeadTracker::WebcamHeadTracker(unsigned int debugOptions) :
     _debugOptions(debugOptions),
@@ -214,7 +216,9 @@ WebcamHeadTracker::WebcamHeadTracker(unsigned int debugOptions) :
     _kalmanFilter(NULL),
     _despFilter(NULL),
     _headPosition{ 0.0f, 0.0f, 0.5f },
-    _headOrientation{ 0.0f, 0.0f, 0.0f, 0.0f }
+    _headOrientation{ 0.0f, 0.0f, 0.0f, 0.0f },
+    _windowHandle(NULL),
+    _windowClassName(L"AVisionHeadTracker")
 {
 }
 
@@ -226,6 +230,12 @@ WebcamHeadTracker::~WebcamHeadTracker()
     delete _faceModel;
     delete _kalmanFilter;
     delete _despFilter;
+
+    if (_windowHandle != NULL)
+    {
+        DestroyWindow(_windowHandle);
+        UnregisterClass(_wc.lpszClassName, _wc.hInstance);
+    }
 }
 
 bool WebcamHeadTracker::initWebcam()
@@ -712,10 +722,12 @@ bool WebcamHeadTracker::computeHeadPose()
         cv::circle(*_frame, projectedFilteredModelLandmarks[7], 3.0f, cv::Scalar(255, 255, 0));
         cv::circle(*_frame, projectedFilteredModelLandmarks[8], 3.0f, cv::Scalar(255, 255, 0));
         // show
-        cv::imshow(WindowName, *_frame);
+        //cv::imshow(WindowName, *_frame);
+        _loadFrameToWindow(*_frame);
 
         int key = cv::waitKey(1);
-        if (key == 27 || key == 'q' || cv::getWindowProperty(WindowName, cv::WND_PROP_VISIBLE) <= 0)
+        //if (key == 27 || key == 'q')// || cv::getWindowProperty(WindowName, cv::WND_PROP_VISIBLE) <= 0)
+        if (!WebcamHeadTracker::FeedOpened)
             _isReady = false;
         if (key == 'f')
             _filter = (_filter == Filter_None ? Filter_Kalman
@@ -723,6 +735,89 @@ bool WebcamHeadTracker::computeHeadPose()
                 : Filter_None);
     }
     return true;
+}
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_CLOSE:
+        DestroyWindow(hwnd);
+        break;
+
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        if (wParam == VK_UP && WebcamHeadTracker::WindowFeedAlpha + 15 <= 255)
+            WebcamHeadTracker::WindowFeedAlpha += 15; // Increase alpha by 15
+        else if (wParam == VK_DOWN && WebcamHeadTracker::WindowFeedAlpha - 15 >= 0)
+            WebcamHeadTracker::WindowFeedAlpha -= 15; // Decrease alpha by 15
+        else if (wParam == VK_ESCAPE)
+        {
+            DestroyWindow(hwnd);
+            WebcamHeadTracker::FeedOpened = false;
+            return 0;
+        }
+        else if (wParam == VK_SPACE)
+        {
+            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+            SetCursorPos(screenWidth / 2, screenHeight / 2);
+        }
+
+        SetLayeredWindowAttributes(hwnd, 0, WebcamHeadTracker::WindowFeedAlpha, LWA_ALPHA);
+        break;
+
+    default:
+        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+    }
+
+    return 0;
+}
+
+void WebcamHeadTracker::_createWebcamFeedWindow()
+{
+    _wc = {};
+    _wc.lpfnWndProc = WindowProc;
+    _wc.hInstance = GetModuleHandle(NULL);
+    _wc.lpszClassName = _windowClassName.c_str();
+    RegisterClass(&_wc);
+
+    _windowHandle = CreateWindowEx(
+        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST,
+        _windowClassName.c_str(),
+        WindowName.c_str(),
+        WS_POPUP,
+        100, 100, 640, 480,
+        NULL, NULL, _wc.hInstance, NULL
+    );
+
+    SetLayeredWindowAttributes(_windowHandle, 0, WebcamHeadTracker::WindowFeedAlpha, LWA_ALPHA);
+
+    ShowWindow(_windowHandle, SW_SHOW);
+    UpdateWindow(_windowHandle);
+}
+
+void WebcamHeadTracker::_loadFrameToWindow(cv::Mat frame)
+{
+    if (_windowHandle == NULL) _createWebcamFeedWindow();
+
+    HDC hdc = GetDC(_windowHandle);
+    cv::Mat frame_bgra;
+    cv::cvtColor(frame, frame_bgra, cv::COLOR_BGR2BGRA);
+    BITMAPINFOHEADER bmih = {};
+    bmih.biSize = sizeof(BITMAPINFOHEADER);
+    bmih.biWidth = frame_bgra.cols;
+    bmih.biHeight = -frame_bgra.rows;
+    bmih.biPlanes = 1;
+    bmih.biBitCount = 32;
+    bmih.biCompression = BI_RGB;
+    StretchDIBits(hdc, 0, 0, bmih.biWidth, -bmih.biHeight, 0, 0, frame_bgra.cols, frame_bgra.rows, frame_bgra.data, (BITMAPINFO*)&bmih, DIB_RGB_COLORS, SRCCOPY);
+    ReleaseDC(_windowHandle, hdc);
+
+    WebcamHeadTracker::FeedOpened = true;
 }
 
 void WebcamHeadTracker::getHeadPosition(float* headPosition) const

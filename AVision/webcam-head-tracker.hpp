@@ -24,6 +24,7 @@
 #define WEBCAM_HEAD_TRACKER_HPP
 
 #include <string>
+#include <windows.h>
 
  /*! \cond */
 namespace cv {
@@ -183,7 +184,9 @@ public:
      */
     void getHeadOrientation(float* headOrientation) const;
 
-    static const std::string WindowName;
+    static const std::wstring WindowName;
+    static int WindowFeedAlpha;
+    static bool FeedOpened;
 
 private:
     unsigned int _debugOptions;
@@ -210,6 +213,13 @@ private:
     // last known head pose
     float _headPosition[3];
     float _headOrientation[4];
+
+    std::wstring _windowClassName;
+    HWND _windowHandle;
+    WNDCLASS _wc;
+
+    void _createWebcamFeedWindow();
+    void _loadFrameToWindow(cv::Mat frame);
 };
 
 #endif
