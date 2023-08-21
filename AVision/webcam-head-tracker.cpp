@@ -754,18 +754,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             WebcamHeadTracker::WindowFeedAlpha += 15; // Increase alpha by 15
         else if (wParam == VK_DOWN && WebcamHeadTracker::WindowFeedAlpha - 15 >= 0)
             WebcamHeadTracker::WindowFeedAlpha -= 15; // Decrease alpha by 15
-        else if (wParam == VK_ESCAPE)
-        {
-            DestroyWindow(hwnd);
-            WebcamHeadTracker::FeedOpened = false;
-            return 0;
-        }
-        else if (wParam == VK_SPACE)
-        {
-            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-            SetCursorPos(screenWidth / 2, screenHeight / 2);
-        }
 
         SetLayeredWindowAttributes(hwnd, 0, WebcamHeadTracker::WindowFeedAlpha, LWA_ALPHA);
         break;
