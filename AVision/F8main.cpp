@@ -66,7 +66,7 @@ private:
 
     void MoveMouse(int dx, int dy)
     {
-        const int K_FACTOR = 6;
+        const int K_FACTOR = 5;
 
         POINT currentPosition;
         GetCursorPos(&currentPosition);
